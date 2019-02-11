@@ -45,23 +45,19 @@
 			,'down_left':7
 		}
 		
+		var movement_history = [];
+		function track_movement(move){
+			var new_movement = {};
+			movement_history.push(new_movement);
+		
+		}
+		
 		function end_game(result, user){
 			layer.off('click');
 			console.log('end_game!!! Result, user', result, user);
 		}
 		
-		function caculate_cat_position(to_circle_y, to_circle_x){
-			if(typeof to_circle_x == "number" && typeof  to_circle_y == "number" ){
-				to_circle_y = ".circle_" + to_circle_y + "_" + to_circle_x;
-			}
-			
-			var shape = layer.find(to_circle_y)[0];
-			var parent = shape.getParent();
-			return {
-				x: parent.x() + shape.x() - (cat_width/2),
-				y: parent.y() +  shape.y()  - (cat_height/2),
-			}
-		}
+		/* calculate next circle to move cat */
 		function next_cat_move(current_x, current_y){
 			if (current_x == undefined && current_y == undefined){
 				var cat_cords = cat_current_circle_id.split('_');
@@ -87,12 +83,13 @@
 			if(exits.length > 0){
 				return exit_cat_move(exits);
 			}
+
 			// END out of range for next move, cat escapes!
 			var cat_directions = [
 				 {finisher: false, priority: 0, direction: move_directions.up_right, x: current_x +1, y: current_y - 1, 'label':'up, right ↗'}
-				,{finisher: false, priority: 1, direction: move_directions.down_left, x: current_x - 1, y: current_y + 1, 'label':'down, left ↙'}
+				,{finisher: false, priority: 0, direction: move_directions.down_left, x: current_x - 1, y: current_y + 1, 'label':'down, left ↙'}
 				,{finisher: false, priority: 0, direction: move_directions.up_left, x: current_x - 1, y: current_y - 1, 'label':'up, left ↖'}
-				,{finisher: false, priority: 1, direction: move_directions.down_right, x: current_x + 1, y: current_y +1, 'label':'down, right ↘'}
+				,{finisher: false, priority: 0, direction: move_directions.down_right, x: current_x + 1, y: current_y +1, 'label':'down, right ↘'}
 				,{finisher: false, priority: 0, direction: move_directions.right, x: current_x +1, y: current_y, 'label':'right →'}
 				,{finisher: false, priority: 0, direction: move_directions.up, x: current_x, y: current_y - 1, 'label':'up ↑'}
 				,{finisher: false, priority: 0, direction: move_directions.left, x: current_x - 1, y: current_y, 'label':'left ←'}
@@ -106,12 +103,63 @@
 			//ordenar por prioridad, tomar el primero
 			//onsole.log('cat_directions', cat_directions);
 			for (var n= 0; n < cat_directions.length; n++){
-				console.log(cat_directions[0].x > -1 && cat_directions[0].x < max_circle_x, cat_directions[0].x, max_circle_x);
-				if ( (cat_directions[0].x > -1 && cat_directions[0].x < max_circle_x) 
-				&& (cat_directions[0].y > -1 && cat_directions[0].y < max_circle_y) 
+				console.log('¿en rango?', cat_directions[n].x > -1 && cat_directions[n].x < max_circle_x, cat_directions[n].x, max_circle_x);
+				//if cat_direction.x is inside the range and
+				//if cat_direction.y is inside the range and
+				//if circle is available, add to valid movements
+				if ( (cat_directions[n].x > -1 && cat_directions[n].x < max_circle_x) 
+				&& (cat_directions[n].y > -1 && cat_directions[n].y < max_circle_y) 
 				&& (circle_map[cat_directions[n].y][cat_directions[n].x] == true)
 				){
-				
+					if(cat_directions[n].x > Math.floor(max_circle_x / 2)){
+						console.log("gato tiende a derecha");
+						
+						if(
+							[
+								move_directions.up_right, 
+								move_directions.down_right,
+								move_directions.right,
+							].indexOf(cat_directions[n].direction) !== -1
+							){
+							cat_directions[n].priority = cat_directions[n].priority + 1 ;
+						}
+						
+					} else {
+						console.log("gato tiende a izquierda");
+						if(
+							[
+								move_directions.up_left, 
+								move_directions.down_left,
+								move_directions.left,
+							].indexOf(cat_directions[n].direction) !== -1
+							){
+							cat_directions[n].priority = cat_directions[n].priority + 1 ;
+						}
+						
+					}
+					if(cat_directions[n].y > Math.floor(max_circle_y / 2)){
+						console.log("gato tiende a abajo");
+						if(
+							[
+								move_directions.down_left, 
+								move_directions.down_right,
+								move_directions.down,
+							].indexOf(cat_directions[n].direction) !== -1
+							){
+							cat_directions[n].priority = cat_directions[n].priority + 1 ;
+						}
+					} else {
+						console.log("gato tiende a arriba");
+						if(
+							[
+								move_directions.up_right, 
+								move_directions.up_left,
+								move_directions.up,
+							].indexOf(cat_directions[n].direction) !== -1
+							){
+							cat_directions[n].priority = cat_directions[n].priority + 1 ;
+						}
+					}
 					/*if ( (cat_directions[0].x-1 > -1 && cat_directions[0].x+1 < max_circle_x) 
 					&& (cat_directions[0].y-1 > -1 && cat_directions[0].y+1 < max_circle_y) 					
 					){
@@ -157,14 +205,14 @@
 					valid_movements.push(cat_directions[n]);
 				} else {
 					//invalid_movements.push(cat_directions[n]);
-					console.log('out of range, possible win');
+					//console.log('out of range, possible win');
 				}
 
 				
 			}
 			
-			console.log('valids, no sort', valid_movements);
-			console.log('invalids', invalid_movements);
+			//console.log('valids, no sort', valid_movements);
+			//console.log('invalids', invalid_movements);
 			if(valid_movements.length > 1){
 				valid_movements.sort(function(a,b){
 					return a.priority -b.priority;
@@ -209,58 +257,40 @@
 			}
 			return exit;
 		}
+		function caculate_cat_position(to_circle_y, to_circle_x){
+			if(typeof to_circle_x == "number" && typeof  to_circle_y == "number" ){
+				to_circle_y = ".circle_" + to_circle_y + "_" + to_circle_x;
+			}
+			
+			var shape = layer.find(to_circle_y)[0];
+			var parent = shape.getParent();
+			return {
+				x: parent.x() + shape.x() - (cat_width/2),
+				y: parent.y() +  shape.y()  - (cat_height/2),
+			}
+		}
+		
+		// step 01 create a new stage
 		var stage = new Konva.Stage({
 		  container: 'container',
 		  width: stage_width + left_padding * 2 ,
 		  height: stage_height + top_padding * 2
 		});
 		var colors = ['white', 'white', 'lightgray']; 
-		var layer = new Konva.Layer();
-		////////////CLICK!
-		layer.on('click touchstart', function (evt) {
-			var shape = evt.target;
-			if(shape.className !== "Circle" || shape.getFill() == colors[2] || cat_current_circle_id == "." + shape.getName()){
-				return;
-			}
-			var parent = shape.getParent();
-			var shape_cords = shape.getName().split('_');
-			circle_map[parseInt(shape_cords[1])][parseInt(shape_cords[2])] = false;
-			shape.setFill(colors[2]);
-			var next_circle = next_cat_move();
-			console.log("next_circle dsdsd", next_circle);
-			var next_cat_pos = null;
-			if(next_circle !== undefined){
-				if (next_circle.finisher !== undefined && next_circle.finisher == true){
-					if(next_circle.user !== undefined && next_circle.user == game.user.cpu){
-						next_cat_pos = next_circle.position;
-						end_game(game.result.win, game.user.cpu);				
-					}
-				} else {
-					next_cat_pos = caculate_cat_position(next_circle.y, next_circle.x);			
-				}
-			}
-			//console.log('next_circle, next_cat_pos', next_circle, next_cat_pos);
-			if(next_circle !== undefined){
-				var cat = layer.find(".cat")[0];
-				cat_current_circle_id = ".circle_"  + next_circle.y + "_" + next_circle.x ;
-				cat.to({
-					 x: next_cat_pos.x
-					,y: next_cat_pos.y
-					,duration: 0.1
-				});
-			} else {
-				end_game(game.result.win, game.user.human);	
-			}
-			//var abs_pos = shape.position();
-					
-			layer.draw();
-		});
-		
-		
+		//step 02 create a new layer
+		var layer = new Konva.Layer();		
+		//step 03 create a new img for cat and position it
 		var imageObj = new Image();
-
 		imageObj.onload = function() {
-			cat_current_circle_id = ".circle_" + (Math.floor(max_circle_y/2)-1) + "_" + (Math.floor(max_circle_x/2)-1) 
+			var cat_initial_positions = [ [(Math.floor(max_circle_y/2)-1),(Math.floor(max_circle_x/2)-1) ] ];
+			cat_initial_positions[1] = [ cat_initial_positions[0][0] + 1, cat_initial_positions[0][1] ];
+			cat_initial_positions[2] = [ cat_initial_positions[0][0] , cat_initial_positions[0][1] + 1 ];
+			cat_initial_positions[3] = [ cat_initial_positions[0][0] + 1, cat_initial_positions[0][1] +1];
+			var rnd_pos = Math.floor(cat_initial_positions.length * Math.random());
+			console.log(cat_initial_positions);
+			
+			//cat_current_circle_id = ".circle_" + (Math.floor(max_circle_y/2)-1) + "_" + (Math.floor(max_circle_x/2)-1) 
+			cat_current_circle_id = ".circle_" + cat_initial_positions[rnd_pos][0] + "_" + cat_initial_positions[rnd_pos][1] ;
 			var new_cat_pos = caculate_cat_position(cat_current_circle_id);
 			var cat_img = new Konva.Image({
 				 x: new_cat_pos.x,
@@ -276,11 +306,10 @@
 		  layer.draw();
 
 		  // add the layer to the stage
-		};
-		
+		};		
 		imageObj.src = '/bootlegcat.png';
 		
-		//add circles and group them
+		//step 04 add circles and group them, add groups to layer
 		for(var n = 0; n < max_circle_y; n++){
 			var group = new Konva.Group({
 				//x: left_padding + (n % 2 == 0 ? 0 : 50)
@@ -308,16 +337,64 @@
 			}
 			layer.add(group);
 		}
+		//step 05 add a click event for circles
+		////////////CLICK!
+		layer.on('click touchstart', function (evt) {
+			var shape = evt.target;
+			//check for a valid shape, an empty circle
+			if(shape.className !== "Circle" || shape.getFill() == colors[2] || cat_current_circle_id == "." + shape.getName()){
+				return;
+			}
+			//var parent = shape.getParent();
+			//get the coordinates for the clicked shape
+			var shape_cords = shape.getName().split('_');
+			circle_map[parseInt(shape_cords[1])][parseInt(shape_cords[2])] = false;
+			//set used color
+			shape.setFill(colors[2]);
+			//calculate the next cat move
+			var next_circle = next_cat_move();
+			//console.log("next_circle dsdsd", next_circle);
+			var next_cat_pos = null;
+			if(next_circle !== undefined){
+				if (next_circle.finisher !== undefined && next_circle.finisher == true){
+					if(next_circle.user !== undefined && next_circle.user == game.user.cpu){
+						next_cat_pos = next_circle.position;
+						end_game(game.result.win, game.user.cpu);				
+					}
+				} else {
+					next_cat_pos = caculate_cat_position(next_circle.y, next_circle.x);			
+				}
+			}
+			//console.log('next_circle, next_cat_pos', next_circle, next_cat_pos);
+			//move cat if next movement is valid
+			if(next_circle !== undefined){
+				var cat = layer.find(".cat")[0];
+				cat_current_circle_id = ".circle_"  + next_circle.y + "_" + next_circle.x ;
+				cat.to({
+					 x: next_cat_pos.x
+					,y: next_cat_pos.y
+					,duration: 0.1
+				});
+			} else {
+				//human wins
+				end_game(game.result.win, game.user.human);	
+			}
+			//var abs_pos = shape.position();
+			//redraw layer for updated positions					
+			layer.draw();
+		});
+		// step 06 add the layer to the stage
+		stage.add(layer);
+		
+
 
 		
 
 		
 		// add the shape to the layer
 
-		// add the layer to the stage
-		stage.add(layer);
 		
-		
+		/* pseudo responsiveness*/
         function fitStageIntoParentContainer(e) {
 			//console.log(e);
             var container = document.querySelector('#container');
