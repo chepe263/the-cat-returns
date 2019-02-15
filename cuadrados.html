@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>The cat runs away.</title>
+    <script
+  src="https://code.jquery.com/jquery-3.3.1.min.js"
+  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+  crossorigin="anonymous"></script>
+<style>
+	#container svg{
+		max-height: 600px;
+	}
+	#container svg g:hover
+	,#container svg rect:hover
+	{
+		opacity:0.8;
+	}
+</style>
+</head>
+<body>
+    <div id="container"></div>
+    <script>
+		
+		jQuery(document).ready(
+			jQuery.get('001.svg',function(data){
+				document.getElementById("container").innerHTML = data;
+			},'html')
+		);
+	</script>
+</body>
+</html>
