@@ -2,11 +2,14 @@
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title>The cat runs away.</title>
+    <title>Count squares.</title>
+	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script
   src="https://code.jquery.com/jquery-3.3.1.min.js"
   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
   crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
 <style>
 	#container svg{
 		max-height: 600px;
@@ -16,17 +19,141 @@
 	{
 		opacity:0.8;
 	}
+	.active{
+		font-weight: bold;
+	}
+	#controls{
+		text-align: center;
+	}
+	#controls button{
+		font-size: 1.2em;
+		margin: 1em;
+	}
+	#options{
+		font-size: 1.2em;
+		text-align: center;
+	}
+	#options ul {
+		display: inline-block;
+	}
 </style>
 </head>
 <body>
-    <div id="container"></div>
-    <script>
+	<div  id="squares">
+	
+		<section id="controls">
+			<template v-for="(item, index) in square_list">
+				<button 
+					type="button" 
+					:value="index" 
+					v-on:click="change_current_square(index)"
+					
+					>
+					{{ index +1 }}. <span :class="{'active': current_index == index }">{{ item.name }}</span>
+				</button>
+			</template>
+			
+		</section>
+		<div id="container" v-html="current_svg_raw"></div>
+		<div v-if="current_index !== null" id="options">
+			<ul>
+				<template v-if="available_options !== null" v-for="item in available_options">
+					<li>
+						<label>
+							<input type="radio" :value='item' name="answer[]" v-model="current_selected_option" /> <span v-html="item"></span>
+						</label>
+					</li>
+				</template>
+				<!--h1>Seleccionado {{ current_selected_option }}</h1-->
+				<button v-on:click="checkAnswer()" v-if="current_selected_option !== null">
+					Responder
+				</button>
+			</ul>
+		</div>
 		
-		jQuery(document).ready(
+	</div>
+    <script>
+		var contenido = null;
+		var squares_app = new Vue({
+			el: '#squares',			
+			data: {
+				square_list: null
+				,current_svg_raw: null
+				,current_index: null
+				,current_selected_option: null
+				,available_options: null
+			}
+			, created: function(){
+				this.current_svg_raw = "<h1>Loading...</h1>";
+				this.fetchData();
+			}
+			,methods: {
+				fetchData: function(){
+					var self = this;
+					axios.get('/squares.json')
+						.then(function(response){
+							self.square_list = _.shuffle(response.data );
+							//c onsole.log(response);
+						})
+						.catch(function (error) {
+							// handle error
+							console.log(error);
+						})
+						.then(function () {
+							if(self.square_list.length > 0){
+								self.change_current_square(0);							
+							}
+							// always executed
+							//do all markup thingy
+						});
+
+				}
+				, change_current_square: function(index){
+					var self = this;
+					this.current_selected_option = null;
+					self.current_index = index;
+					self.available_options = _.shuffle(self.square_list[self.current_index].answers.options);
+					if(self.square_list[index].raw_svg){
+						self.current_svg_raw = self.square_list[index].raw_svg;
+						return true;
+					}
+					axios.get(self.square_list[index].filepath)
+						.then(function(response){
+							//c onsole.log(response);
+							self.current_svg_raw = response.data;
+							self.square_list[index].raw_svg = response.data;
+						})
+						.catch(function (error) {
+							// handle error
+							console.log(error);
+						})
+				}
+				,checkAnswer: function(){
+					var msg = '¡Respuesta correcta!';
+					var self = this;
+					if (parseInt(this.square_list[this.current_index].answers.correct) !== parseInt( this.current_selected_option) ){
+						msg = '¡Respuesta incorrecta!';
+					} else {
+					
+						setTimeout(function(){
+							self.current_index++;
+							if ( self.square_list[self.current_index] == undefined){
+								self.current_index = 0;
+							}
+							self.change_current_square(self.current_index)
+						}, 1500);
+					}
+					alert(msg);
+				}
+			}
+		});
+		
+		
+		/*jQuery(document).ready(
 			jQuery.get('001.svg',function(data){
 				document.getElementById("container").innerHTML = data;
 			},'html')
-		);
+		);*/
 	</script>
 </body>
 </html>
