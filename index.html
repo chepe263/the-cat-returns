@@ -4,25 +4,59 @@
     <meta charset="UTF-8">
     <title>The cat runs away.</title>
     <script src="https://unpkg.com/konva@2.4.2/konva.min.js"></script>
-
+	<style>
+	#controls{
+		position: absolute;
+		right: 5%;
+		top: 3%;
+	}
+	</style>
 </head>
 <body>
     <div id="container"></div>
+	<div id ="controls">
+		<section>
+			<p>Dificultad</p>
+			<select id="dificulty" onchange="set_dificulty(this.value)">
+				<option value="0">Facil</option>
+				<option value="1">Normal</option>
+				<option value="2">Dificil</option>
+			</select>
+			<p>Power diagonales</p>
+			<select id="power_diagonals" onchange="set_power_diagonals(this.value)">
+				<option value="0">No</option>
+				<option value="1">Si</option>
+			</select>
+			
+		</section>
+		<section>
+		</section>
+	</div>
     <script>
 		var stage_width = 800; //window.innerWidth;
 		var stage_height = 600; //window.innerHeight;
 		var size_ratio = stage_width / stage_height;
 		var max_circle_x = 10 ;
-		var max_circle_y = 6 ;
+		var max_circle_y = 10 //6 ;
 		var cat_current_circle_id = '';
-		var left_padding = 70; // space at the left side of the board
-		var top_padding = 70; // space at the left side of the board
+		var left_padding = 70 /2; // space at the left side of the board
+		var top_padding =  70 /2; // space at the left side of the board
 		var top_margin_factor = 1.3;  //margin between circles
 		var left_margin_factor = 1.1; //margin between circles	
-		var cat_width = 50;
-		var cat_height = 50 ;
-		var radius = 35 ; //circle_radius
+		var cat_width =  50 * 0.7;
+		var cat_height = 50 * 0.7 ;
+		var radius = 35 * 0.7 ; //circle_radius
 		var circle_map = [];
+		var power_diagonals = false;
+		//use any movement available on the movement list at next_cat_move()
+		var random_cat_movement = false;
+		//dificulty = 
+		// 0 = Easy, random movements
+		// 1 = Normal, find vertical movements
+		// 2 = Hard, Prefer vertical movemnt
+		var dificulty = 0;
+		
+		var turn_count = 0;
 		var game = {
 			'result': {
 				'win': 1
@@ -59,6 +93,12 @@
 		
 		/* calculate next circle to move cat */
 		function next_cat_move(current_x, current_y){
+			turn_count++;
+			/*if( turn_count> 8 ){
+				random_cat_movement = false;
+			} else {
+				random_cat_movement = true;
+			}*/
 			if (current_x == undefined && current_y == undefined){
 				var cat_cords = cat_current_circle_id.split('_');
 				current_x = parseInt(cat_cords[2] );
@@ -87,115 +127,90 @@
 			// END out of range for next move, cat escapes!
 			var cat_directions = [
 				 {finisher: false, priority: 0, direction: move_directions.up_right, x: current_x +1, y: current_y - 1, 'label':'up, right ↗'}
-				,{finisher: false, priority: 0, direction: move_directions.down_left, x: current_x - 1, y: current_y + 1, 'label':'down, left ↙'}
-				,{finisher: false, priority: 0, direction: move_directions.up_left, x: current_x - 1, y: current_y - 1, 'label':'up, left ↖'}
-				,{finisher: false, priority: 0, direction: move_directions.down_right, x: current_x + 1, y: current_y +1, 'label':'down, right ↘'}
 				,{finisher: false, priority: 0, direction: move_directions.right, x: current_x +1, y: current_y, 'label':'right →'}
 				,{finisher: false, priority: 0, direction: move_directions.up, x: current_x, y: current_y - 1, 'label':'up ↑'}
 				,{finisher: false, priority: 0, direction: move_directions.left, x: current_x - 1, y: current_y, 'label':'left ←'}
 				,{finisher: false, priority: 0, direction: move_directions.down, x: current_x, y: current_y + 1, 'label':'down ↓'}
-				//,{x: current_x, y: current_y} //
+				,{finisher: false, priority: 0, direction: move_directions.down_left, x: current_x - 1, y: current_y + 1, 'label':'down, left ↙'}
+				,{finisher: false, priority: 0, direction: move_directions.up_left, x: current_x - 1, y: current_y - 1, 'label':'up, left ↖'}
+				,{finisher: false, priority: 0, direction: move_directions.down_right, x: current_x + 1, y: current_y +1, 'label':'down, right ↘'}
 			];
+			
+			
 			//todo: a las direcciones del gato, cat_directions agregar prioridad
 			//si el x es mayor a la mitad, tiene mas prioridad
 			//si el x es menor a la mitad, tiene menos prioridad
 			//igual con y
-			//ordenar por prioridad, tomar el primero
 			//onsole.log('cat_directions', cat_directions);
-			for (var n= 0; n < cat_directions.length; n++){
-				console.log('¿en rango?', cat_directions[n].x > -1 && cat_directions[n].x < max_circle_x, cat_directions[n].x, max_circle_x);
+			for (var n = 0; n < cat_directions.length; n++){
+				//console.log('¿en rango?', cat_directions[n].x > -1 && cat_directions[n].x < max_circle_x, cat_directions[n].x, max_circle_x);
 				//if cat_direction.x is inside the range and
 				//if cat_direction.y is inside the range and
 				//if circle is available, add to valid movements
-				if ( (cat_directions[n].x > -1 && cat_directions[n].x < max_circle_x) 
-				&& (cat_directions[n].y > -1 && cat_directions[n].y < max_circle_y) 
-				&& (circle_map[cat_directions[n].y][cat_directions[n].x] == true)
+				if (cat_direction_in_range(cat_directions[n]) && (circle_map[cat_directions[n].y][cat_directions[n].x] == true)
 				){
-					if(cat_directions[n].x > Math.floor(max_circle_x / 2)){
-						console.log("gato tiende a derecha");
-						
-						if(
-							[
-								move_directions.up_right, 
-								move_directions.down_right,
-								move_directions.right,
-							].indexOf(cat_directions[n].direction) !== -1
-							){
-							cat_directions[n].priority = cat_directions[n].priority + 1 ;
-						}
-						
-					} else {
-						console.log("gato tiende a izquierda");
-						if(
-							[
-								move_directions.up_left, 
-								move_directions.down_left,
-								move_directions.left,
-							].indexOf(cat_directions[n].direction) !== -1
-							){
-							cat_directions[n].priority = cat_directions[n].priority + 1 ;
-						}
-						
-					}
-					if(cat_directions[n].y > Math.floor(max_circle_y / 2)){
-						console.log("gato tiende a abajo");
-						if(
-							[
-								move_directions.down_left, 
-								move_directions.down_right,
-								move_directions.down,
-							].indexOf(cat_directions[n].direction) !== -1
-							){
-							cat_directions[n].priority = cat_directions[n].priority + 1 ;
-						}
-					} else {
-						console.log("gato tiende a arriba");
-						if(
-							[
-								move_directions.up_right, 
-								move_directions.up_left,
-								move_directions.up,
-							].indexOf(cat_directions[n].direction) !== -1
-							){
-							cat_directions[n].priority = cat_directions[n].priority + 1 ;
-						}
-					}
-					/*if ( (cat_directions[0].x-1 > -1 && cat_directions[0].x+1 < max_circle_x) 
-					&& (cat_directions[0].y-1 > -1 && cat_directions[0].y+1 < max_circle_y) 					
-					){
-						if (
-						(circle_map[cat_directions[n].y][cat_directions[n].x +1] == true) ||  //right
-						(circle_map[cat_directions[n].y][cat_directions[n].x -1] == true) ||  // left
-						
-						(circle_map[cat_directions[n].y+1][cat_directions[n].x] == true) || // down
-						(circle_map[cat_directions[n].y-1][cat_directions[n].x] == true) || // up
-						
-						
-						(circle_map[cat_directions[n].y+1][cat_directions[n].x +1] == true) ||  //down, right
-						(circle_map[cat_directions[n].y +1][cat_directions[n].x -1] == true) || //down, left
-						
-						(circle_map[cat_directions[n].y -1 ][cat_directions[n].x +1] == true) || //up, right
-						(circle_map[cat_directions[n].y -1 ][cat_directions[n].x -1] == true)    //up, left
-						){
-							cat_directions[n].priority  = cat_directions[n].priority + 1;
-						}
-					
-					}*/
-				
-					/*if( cat_directions[n].x > Math.floor( max_circle_x / 2) ){
-						//preffer right directions
-						if( cat_directions[n].y > Math.floor( max_circle_y / 2) ){
-							//preffer down directions						
-							cat_directions[n].priority  = cat_directions[n].priority + 1;
+					cat_movement_prority(cat_directions[n]);
+					//console.log("new priority", cat_directions[n].priority);
+					if (power_diagonals){
+						if(cat_directions[n].x > Math.floor(max_circle_x / 2)){
+							//console.log("gato tiende a derecha");
+							
+							if(
+								[
+									move_directions.up_right, 
+									move_directions.down_right,
+									move_directions.right,
+								].indexOf(cat_directions[n].direction) !== -1
+								){
+								cat_directions[n].priority = cat_directions[n].priority + 1 ;
+							}
+							
 						} else {
-							//preffer up directions
-							cat_directions[n].priority  = cat_directions[n].priority - 1;
+							//console.log("gato tiende a izquierda");
+							if(
+								[
+									move_directions.up_left, 
+									move_directions.down_left,
+									move_directions.left,
+								].indexOf(cat_directions[n].direction) !== -1
+								){
+								cat_directions[n].priority = cat_directions[n].priority + 1 ;
+							}
+							
 						}
-					} else {
-						//preffer left directions
-						//preffer up directions
-						
-					}*/
+						if(cat_directions[n].y > Math.floor(max_circle_y / 2)){
+							//console.log("gato tiende a abajo");
+							if(
+								[
+									move_directions.down_left, 
+									move_directions.down_right,
+									move_directions.down,
+								].indexOf(cat_directions[n].direction) !== -1
+								){
+								cat_directions[n].priority = cat_directions[n].priority + 1 ;
+							}
+						} else {
+							//console.log("gato tiende a arriba");
+							if(
+								[
+									move_directions.up_right, 
+									move_directions.up_left,
+									move_directions.up,
+								].indexOf(cat_directions[n].direction) !== -1
+								){
+								cat_directions[n].priority = cat_directions[n].priority + 1 ;
+							}
+						}
+					}
+					var depth_x = 0;
+					var depth_y = 0;
+
+					var depth = 5;
+					
+
+					//var extra_priority = 
+					
+
 					if(cat_directions[n].x + 1 >= max_circle_x - 2 || cat_directions[n].x - 1 < 1){
 						cat_directions[n].priority  = cat_directions[n].priority + 1;
 					}
@@ -213,22 +228,139 @@
 			
 			//console.log('valids, no sort', valid_movements);
 			//console.log('invalids', invalid_movements);
+			var movement_index = 0;
 			if(valid_movements.length > 1){
 				valid_movements.sort(function(a,b){
 					return a.priority -b.priority;
 				});
 				valid_movements.reverse();
-				console.log('valids, sort', valid_movements);
+				if (random_cat_movement){
+					movement_index = Math.floor( (valid_movements.length - 1) * Math.random());				
+				} else {
+					switch(dificulty){
+						case 0: // easy
+							 movement_index = valid_movements.length - 1;
+						break;
+						case 1: //normal
+							movement_index = Math.max(0, Math.floor(valid_movements.length / 2)-1);
+						break;
+						case 2: //hard
+							movement_index = 0;
+						break;
+					}
+				}
+				//console.log('valids, selected', valid_movements,movement_index, valid_movements[movement_index]);
 				/*for(var n = 0; n < valid_movements.length; n++){
 				
 				}*/
 			}
-			return valid_movements[0]
+			return valid_movements[movement_index];
 			/*{
 				x: 0
 				,y: 1
 			}*/
 		}
+
+		//takes movement and compares the x coordenate to be inside of the beggining and end of the board
+		//and takes the y coordenate and compares it with the limits of the board.
+		function cat_direction_in_range(movement){
+			return (movement.x > -1 && movement.x < max_circle_x) 
+				&& (movement.y > -1 && movement.y < max_circle_y);
+		
+		}
+		//check for cat position on the edges
+		function cat_movement_possible_exit(movement, tolerance_x, tolerance_y){
+			tolerance_x = tolerance_x || 0;
+			tolerance_y = tolerance_y || tolerance_x;
+			return ( movement.x <= tolerance_x || movement.x >= max_circle_x - tolerance_x )
+			|| ( movement.y <= tolerance_y || movement.y >= max_circle_y - tolerance_y );
+			
+		}
+		//movement: original cat movement 
+		//movement_copy: a copy to manipulate
+		//steps: how many times we must run the recursive function
+		//
+		function cat_movement_prority(movement, movement_copy, steps){
+			steps = steps || 0;
+			//Math.floor( (max_circle_x + max_circle_y) / 4) 
+			if (steps >= 2){
+				//console.log("movement, movement_copy, steps", movement, movement_copy, steps);
+				return movement.priority;
+			}
+			/*if (depth_x + depth_y == 0){
+				return movement.priority;
+			}*/
+			//console.log("called cat_movement_prority, recursive");
+			//delta of directions
+			var direction = [];
+			direction[ move_directions.up			] = {x:  0, y: -1, 'label':'up ↑'};
+			direction[ move_directions.down			] = {x:  0, y:  1, 'label':'down ↓'};
+			direction[ move_directions.left			] = {x: -1, y:  0, 'label':'left ←'};
+			direction[ move_directions.right		] = {x:  1, y:  0, 'label':'right →'};
+			direction[ move_directions.up_right		] = {x:  1, y: -1, 'label':'up, right ↗'};
+			direction[ move_directions.up_left		] = {x: -1, y: -1, 'label':'up, left ↖'};			
+			direction[ move_directions.down_right	] = {x:  1, y:  1, 'label':'down, right ↘'};
+			direction[ move_directions.down_left	] = {x: -1, y:  1, 'label':'down, left ↙'};
+			
+			if (movement_copy == undefined || movement_copy == null){
+				movement_copy = JSON.parse( JSON.stringify(movement));
+			}
+			//console.log("before movement_copy.x, movement_copy.y", movement_copy.x, movement_copy.y);
+			movement_copy.x = movement_copy.x + direction[movement.direction].x;
+			movement_copy.y = movement_copy.y + direction[movement.direction].y;
+			//console.log("after movement_copy.x, movement_copy.y", movement_copy.x, movement_copy.y);
+			//todo verificar si el gato esta en el borde y dar prioridad a ese movimiento
+			if ( cat_direction_in_range(movement_copy) ){
+				//console.log("new depths", movement_copy.x, movement_copy.y, movement_copy.label);
+				if( circle_map[movement_copy.y][movement_copy.x] == true ){
+				
+					if (cat_movement_possible_exit(movement_copy, 1)){
+						movement.priority = movement.priority + 10;
+						//console.log("near edge, x,y", movement_copy.x, movement_copy.y, direction[movement.direction].label, movement);
+					}/* else {
+					}*/
+						movement.priority = movement.priority + 2;
+					//console.log("cat_movement_closest_board_corner", cat_movement_closest_board_corner(movement_copy));
+				} else {
+					steps = 100 + steps * 10;
+					movement.priority = movement.priority - 1;
+					//console.log("next is busy, exit steps ", steps);
+				}
+				
+			} else {
+				movement.priority = movement.priority + 30;
+			}
+			return cat_movement_prority(movement, movement_copy, steps + 1);
+			return null;
+		
+		}
+		
+		function cat_movement_closest_board_corner(movement){
+			var side = '';
+		/*
+		*****************
+		*	a	*	b	*
+		*****************
+		*	c	*	d	*
+		*****************
+			a	movement.x < Math.floor(max_circle_x / 2) && movement.y < Math.floor(max_circle_y / 2)
+			b	movement.x > Math.floor(max_circle_x / 2) && movement.y > Math.floor(max_circle_y / 2)
+			c	movement.x > Math.floor(max_circle_x / 2) && movement.y < Math.floor(max_circle_y / 2)
+			d	movement.x > Math.floor(max_circle_x / 2) && movement.y > Math.floor(max_circle_y / 2)
+
+		*/
+			if (movement.x < Math.floor(max_circle_x / 2) && movement.y < Math.floor(max_circle_y / 2)){
+				side = 'a';
+			} else if(movement.x > Math.floor(max_circle_x / 2) && movement.y > Math.floor(max_circle_y / 2)){
+				side = 'b';
+			} else if (movement.x > Math.floor(max_circle_x / 2) && movement.y < Math.floor(max_circle_y / 2)){
+				side = 'c';
+			} else if (movement.x > Math.floor(max_circle_x / 2) && movement.y > Math.floor(max_circle_y / 2)){
+				side = 'd';
+			}
+			return side;
+		}
+		
 		
 		function exit_cat_move(moves){
 			var cat_cords = cat_current_circle_id.split('_');
@@ -287,7 +419,6 @@
 			cat_initial_positions[2] = [ cat_initial_positions[0][0] , cat_initial_positions[0][1] + 1 ];
 			cat_initial_positions[3] = [ cat_initial_positions[0][0] + 1, cat_initial_positions[0][1] +1];
 			var rnd_pos = Math.floor(cat_initial_positions.length * Math.random());
-			console.log(cat_initial_positions);
 			
 			//cat_current_circle_id = ".circle_" + (Math.floor(max_circle_y/2)-1) + "_" + (Math.floor(max_circle_x/2)-1) 
 			cat_current_circle_id = ".circle_" + cat_initial_positions[rnd_pos][0] + "_" + cat_initial_positions[rnd_pos][1] ;
@@ -296,8 +427,8 @@
 				 x: new_cat_pos.x,
 				y: new_cat_pos.y,
 				image: imageObj,
-				width: 50,
-				height: 50,
+				width: cat_width,
+				height: cat_height,
 				name: "cat"
 			  });
 
@@ -317,6 +448,9 @@
 				,y: top_padding + (radius*2 * top_margin_factor) * n
 			});
 			circle_map[n] = [];
+			
+
+			
 			for(var i = 0; i < max_circle_x; i++){
 
 				var circle = new Konva.Circle({
@@ -353,6 +487,7 @@
 			shape.setFill(colors[2]);
 			//calculate the next cat move
 			var next_circle = next_cat_move();
+			//var next_circle = undefined;
 			//console.log("next_circle dsdsd", next_circle);
 			var next_cat_pos = null;
 			if(next_circle !== undefined){
@@ -386,6 +521,23 @@
 		// step 06 add the layer to the stage
 		stage.add(layer);
 		
+		function load_map(){
+
+			circle_map = [
+			 ,[true, true, true, false, true, true, false, true, true, true]
+			,[true, true, true, false, true, true, false, true, true, true]
+			,[true, true, true, false, true, true, false, true, true, true]
+			,[true, true, true, false, true, true, false, true, true, true]
+			,[true, true, true, false, true, true, false, true, true, true]
+			,[true, true, true, false, false, false, false, true, true, true]
+			]
+			for(var n = 0; n < max_circle_y; n++){
+				for(var i = 0; i < max_circle_x; i++){
+				
+				}
+			}
+		};
+		
 
 
 		
@@ -413,6 +565,33 @@
             stage.scale({ x: scale, y: scale });
             stage.draw();
         }
+		function set_dificulty(val){
+			if (val == undefined){
+				val = parseInt( localStorage.getItem('dificulty') );
+				if (isNaN(val)){
+					val = 0;
+				}
+			} else {			
+				localStorage.setItem('dificulty', val);
+			}
+			dificulty = val;
+			//console.log('dificulty', val);
+			return document.getElementById("dificulty").value = val;
+		}
+		
+		function set_power_diagonals(val){
+			if (val == undefined){
+				val = parseInt( localStorage.getItem('power_diagonals') ) || 0;
+			} else {			
+				localStorage.setItem('power_diagonals', val);
+			}
+			
+			power_diagonals = val == 1;
+			//console.log('power_diagonals', power_diagonals);
+			return document.getElementById("power_diagonals").value = val;
+		}
+		set_dificulty();
+		set_power_diagonals();
 
         fitStageIntoParentContainer();
         // adapt the stage on any window resize
