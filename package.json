@@ -1,0 +1,20 @@
+{
+  "name": "the-cat-returns",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "python3 -m http.server 3000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chepe263/the-cat-returns.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chepe263/the-cat-returns/issues"
+  },
+  "homepage": "https://github.com/chepe263/the-cat-returns#readme",
+  "description": ""
+}
